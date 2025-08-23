@@ -1,0 +1,15 @@
+{
+    "data_source": "429e6e3f-281d-4e4c-b00a-92fb020cb2fcFlight_Data.xlsx",
+    "analysis_params": {
+        "delay_threshold": 15,
+        "cascade_factor": 0.4,
+        "simulation_delay_reduction": 5,
+        "peak_hour_shift": 1
+    },
+    "output_formats": [
+        "csv",
+        "json",
+        "html"
+    ],
+    "dashboard_port": 8050
+}
