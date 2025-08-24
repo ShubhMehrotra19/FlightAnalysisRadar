@@ -12,6 +12,9 @@ plotly>=5.0.0
 # Dashboard (keeping for compatibility, but using standalone HTML)
 dash>=2.0.0
 
+# Machine learning (required for enhanced dashboard features)
+scikit-learn>=1.0.0
+
 # Utilities
 pathlib2>=2.3.0
 python-dateutil>=2.8.0

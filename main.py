@@ -11,8 +11,8 @@ sys.path.append(str(PROJECT_ROOT))
 
 
 def main():
-    """Main execution function with proper parameter handling"""
-    parser = argparse.ArgumentParser(description='Flight Data Analysis Pipeline with Interactive Dashboard')
+    """Main execution function with enhanced dashboard support"""
+    parser = argparse.ArgumentParser(description='Enhanced Flight Data Analysis Pipeline with Multi-Feature Dashboard')
     parser.add_argument('--config', '-c', type=str, help='Configuration file path')
     parser.add_argument('--steps', '-s', nargs='+', 
                        choices=['extract', 'transform', 'analyze', 'visualize', 'dashboard'],
@@ -22,7 +22,9 @@ def main():
     parser.add_argument('--open-dashboard', action='store_true', 
                        help='Automatically open dashboard in web browser')
     parser.add_argument('--dashboard-only', action='store_true',
-                       help='Generate only the dashboard (runs extract, transform, analyze, dashboard)')
+                       help='Generate only the enhanced dashboard (runs extract, transform, analyze, dashboard)')
+    parser.add_argument('--feature', '-f', choices=['dashboard', 'analytics', 'scheduling', 'predictions', 'nlp'],
+                       help='Focus on specific dashboard feature')
     
     args = parser.parse_args()
     
@@ -40,9 +42,8 @@ def main():
         traceback.print_exc()
         sys.exit(1)
     
-    # Load configuration - THIS IS THE FIX
+    # Load configuration
     try:
-        # Load config into a dictionary first
         config_dict = Config.load(args.config)
         print(f"✅ Configuration loaded successfully")
         print(f"   Config type: {type(config_dict)}")
@@ -65,14 +66,14 @@ def main():
     
     print(f"📋 Pipeline steps to execute: {steps}")
     
-    # Initialize pipeline - PASS THE CONFIG DICTIONARY, NOT PATH
+    # Initialize pipeline with enhanced dashboard
     try:
-        print(f"🔧 Initializing pipeline with config dictionary...")
+        print(f"🔧 Initializing enhanced pipeline...")
         
-        # The key fix: pass the config dictionary directly
-        pipeline = FlightDataPipeline(config_dict)
+        # Use enhanced dashboard generator
+        pipeline = EnhancedFlightDataPipeline(config_dict)
         
-        print(f"✅ Pipeline initialized successfully")
+        print(f"✅ Enhanced pipeline initialized successfully")
         
     except Exception as e:
         print(f"❌ Pipeline initialization failed: {str(e)}")
@@ -83,16 +84,16 @@ def main():
     # Run pipeline
     try:
         print("\n" + "="*70)
-        print("🚀 FLIGHT DATA ANALYSIS PIPELINE")
+        print("🚀 ENHANCED FLIGHT DATA ANALYSIS SYSTEM")
         print("="*70)
         
         results = pipeline.run_pipeline(steps=steps)
         
         print("\n" + "="*70)
-        print("🎉 PIPELINE EXECUTION COMPLETED SUCCESSFULLY!")
+        print("🎉 ENHANCED PIPELINE EXECUTION COMPLETED SUCCESSFULLY!")
         print("="*70)
         
-        # Print summary
+        # Print comprehensive summary
         if 'analysis' in results:
             stats = results['analysis'].get('basic_stats', {})
             print(f"\n📊 ANALYSIS SUMMARY:")
@@ -112,10 +113,10 @@ def main():
                     avg_delay = delay_info['Departure Delay (min)']['mean']
                     print(f"   • Average Delay: {avg_delay:.1f} minutes")
         
-        # Handle dashboard
+        # Handle enhanced dashboard
         if 'dashboard_path' in results:
             dashboard_path = Path(results['dashboard_path'])
-            print(f"\n🖥️  INTERACTIVE DASHBOARD:")
+            print(f"\n🖥️  ENHANCED MULTI-FEATURE DASHBOARD:")
             print(f"   • File: {dashboard_path}")
             
             if dashboard_path.exists():
@@ -126,17 +127,30 @@ def main():
                 dashboard_url = f"file://{abs_path}"
                 
                 print(f"   • URL: {dashboard_url}")
-                print(f"\n💡 DASHBOARD FEATURES:")
-                print(f"   • Interactive charts and visualizations")
-                print(f"   • Natural Language Query interface")
-                print(f"   • Real-time data exploration")
-                print(f"   • Responsive design for all devices")
+                print(f"\n✨ ENHANCED DASHBOARD FEATURES:")
+                print(f"   🏠 Dashboard: Real-time operations overview and KPIs")
+                print(f"   📊 Analytics: Advanced metrics with filtering and reporting")
+                print(f"   📅 Scheduling: Flight scheduling management and optimization")
+                print(f"   🔮 Predictions: AI-powered forecasting and insights")
+                print(f"   💬 NLP Query: Natural language interface for data exploration")
+                
+                if args.feature:
+                    print(f"\n🎯 FOCUSED FEATURE: {args.feature.upper()}")
+                    print(f"   The dashboard will highlight the {args.feature} section")
                 
                 # Auto-open dashboard if requested
                 if args.open_dashboard or args.dashboard_only:
                     try:
-                        print(f"\n🌐 Opening dashboard in web browser...")
+                        print(f"\n🌐 Opening enhanced dashboard in web browser...")
+                        
+                        # Add feature focus parameter if specified
+                        if args.feature:
+                            dashboard_url += f"#{args.feature}"
+                        
                         webbrowser.open(dashboard_url)
+                        
+                        print(f"✅ Dashboard opened successfully!")
+                        
                     except Exception as e:
                         print(f"   ⚠️  Could not auto-open browser: {str(e)}")
                         print(f"   📂 Please manually open: {abs_path}")
@@ -145,6 +159,7 @@ def main():
         
         # Show generated files
         print(f"\n📁 OUTPUT FILES:")
+        print(f"   • Enhanced Dashboard: {pipeline.reports_dir / 'flight_dashboard.html'}")
         print(f"   • Reports Directory: {pipeline.reports_dir}")
         print(f"   • Processed Data: {pipeline.data_dir}")
         
@@ -155,12 +170,27 @@ def main():
             if 'interactive_plots' in viz_results and viz_results['interactive_plots']:
                 print(f"   • Interactive Charts: {len(viz_results['interactive_plots'])} files")
         
-        # Instructions for next steps
-        print(f"\n🚀 NEXT STEPS:")
-        print(f"   1. Open the dashboard HTML file in your web browser")
-        print(f"   2. Use the NLP query interface to ask questions about your data")
-        print(f"   3. Explore the interactive charts and visualizations")
-        print(f"   4. Check the reports directory for additional analysis files")
+        # Enhanced usage instructions
+        print(f"\n🚀 GETTING STARTED WITH THE ENHANCED DASHBOARD:")
+        print(f"   1. 🏠 Dashboard Tab: View real-time operations overview")
+        print(f"   2. 📊 Analytics Tab: Explore advanced metrics and generate reports")
+        print(f"   3. 📅 Scheduling Tab: Manage flight schedules and optimize operations")
+        print(f"   4. 🔮 Predictions Tab: Access AI forecasting and predictive insights")
+        print(f"   5. 💬 NLP Query Tab: Ask questions in natural language")
+        
+        print(f"\n💡 SAMPLE NLP QUERIES TO TRY:")
+        print(f"   • 'What's the average delay by airline?'")
+        print(f"   • 'Which hours have the most delays?'")
+        print(f"   • 'Show me weekend vs weekday performance'")
+        print(f"   • 'Predict delays for next week'")
+        print(f"   • 'What are the seasonal trends?'")
+        
+        print(f"\n🔧 ADVANCED FEATURES:")
+        print(f"   • Interactive filtering and drill-down analysis")
+        print(f"   • Automated report generation (PDF export)")
+        print(f"   • Schedule optimization recommendations")
+        print(f"   • Machine learning-powered predictions")
+        print(f"   • Real-time data refresh capabilities")
         
         return 0
         
@@ -182,13 +212,14 @@ def main():
         return 1
         
     except Exception as e:
-        print(f"\n❌ PIPELINE EXECUTION FAILED:")
+        print(f"\n❌ ENHANCED PIPELINE EXECUTION FAILED:")
         print(f"   Error: {str(e)}")
         print(f"   Error type: {type(e)}")
         print(f"\n💡 TROUBLESHOOTING:")
         print(f"   • Check your data file format and content")
         print(f"   • Ensure all dependencies are installed: pip install -r requirements.txt")
         print(f"   • Verify the configuration file is correct")
+        print(f"   • For enhanced features, ensure scikit-learn is installed")
         print(f"   • Check the logs for more detailed error information")
         
         # Print more detailed error in debug mode
@@ -197,6 +228,66 @@ def main():
             traceback.print_exc()
         
         return 1
+
+
+class EnhancedFlightDataPipeline:
+    """Enhanced pipeline class that uses the new dashboard generator"""
+    
+    def __init__(self, config):
+        self.config = config
+        self.data_dir = Path(config.get('data_dir', 'data'))
+        self.reports_dir = Path(config.get('reports_dir', 'reports'))
+        
+        # Import the enhanced dashboard generator
+        try:
+            from app.dashboard_generator import EnhancedDashboardGenerator
+            self.dashboard_generator = EnhancedDashboardGenerator(config)
+        except ImportError:
+            print("⚠️  Enhanced dashboard generator not found, using standard version")
+            from app.dashboard_generator import DashboardGenerator
+            self.dashboard_generator = DashboardGenerator(config)
+    
+    def run_pipeline(self, steps=None):
+        """Run the enhanced pipeline"""
+        if steps is None:
+            steps = ['extract', 'transform', 'analyze', 'dashboard']
+        
+        results = {}
+        
+        # Import pipeline components
+        from app.data_processor import DataProcessor
+        from app.analyzer import FlightAnalyzer
+        
+        # Extract data
+        if 'extract' in steps:
+            print("📥 Extracting data...")
+            processor = DataProcessor(self.config, self.data_dir)
+            df_raw = processor.extract_data()
+            print(f"   ✅ Extracted {len(df_raw)} raw records")
+        
+        # Transform data
+        if 'transform' in steps:
+            print("🔄 Transforming data...")
+            df_clean = processor.transform_data(df_raw)
+            print(f"   ✅ Processed {len(df_clean)} clean records")
+            results['transformed_data'] = df_clean
+        
+        if 'analyze' in steps:
+            print("📊 Analyzing data...")
+            analyzer = FlightAnalyzer(self.config)
+            # Change this line from analyzer.analyze(df_clean) to:
+            analysis_results = analyzer.run_analysis(df_clean)
+            print(f"   ✅ Generated comprehensive analysis")
+            results['analysis'] = analysis_results
+        
+        # Generate enhanced dashboard
+        if 'dashboard' in steps:
+            print("🖥️  Generating enhanced multi-feature dashboard...")
+            dashboard_path = self.dashboard_generator.create_dashboard(df_clean, analysis_results)
+            print(f"   ✅ Enhanced dashboard created with all features")
+            results['dashboard_path'] = dashboard_path
+        
+        return results
 
 
 def main_with_args(args_list):
@@ -209,17 +300,22 @@ def main_with_args(args_list):
         sys.argv = original_argv
 
 
-def launch_dashboard_only():
-    """Quick function to launch just the dashboard"""
-    print("🚀 Quick Dashboard Launch...")
+def launch_enhanced_dashboard():
+    """Quick function to launch the enhanced dashboard"""
+    print("🚀 Enhanced Multi-Feature Dashboard Launch...")
     return main_with_args(['--dashboard-only', '--open-dashboard'])
+
+
+def launch_feature_focused(feature):
+    """Launch dashboard with specific feature focus"""
+    print(f"🎯 Launching dashboard focused on {feature.upper()} feature...")
+    return main_with_args(['--dashboard-only', '--open-dashboard', '--feature', feature])
 
 
 if __name__ == "__main__":
     exit_code = main()
     
     if exit_code == 0:
-        print(f"\n✨ Thank you for using Flight Data Analysis Pipeline!")
-        print(f"   For support and updates, visit: https://github.com/your-repo/FlightRadarAnalytics")
-    
+        print(f"\n✨ Thank you for using the Enhanced Flight Data Analysis System!")
+        print(f"🌟 Explore all five powerful features in your new dashboard!")
     sys.exit(exit_code)

@@ -1,67 +1,4 @@
-# ==========================================
-# ENHANCED MULTI-FEATURE DASHBOARD MODULE
-# ==========================================
-# File: FlightRadarAnalytics/app/dashboard_generator.py
 
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import plotly.offline as pyo
-import re
-from pathlib import Path
-import json
-from datetime import datetime, timedelta
-import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-import warnings
-from .nlp_processor import NLPQueryProcessor
-warnings.filterwarnings('ignore')
-
-class EnhancedDashboardGenerator:
-    """Generate comprehensive web application with multiple features"""
-    
-    def __init__(self, config):
-        self.config = config
-        self.df = None
-        self.analysis_results = None
-        self.nlp_processor = None
-        
-    def create_dashboard(self, df, analysis_results):
-        self.df = df
-        self.analysis_results = analysis_results
-        self.nlp_processor = NLPQueryProcessor(df, analysis_results)
-        
-        # Generate the complete dashboard HTML
-        dashboard_html = self._generate_dashboard_html()
-        
-        # Save dashboard to reports directory
-        dashboard_path = Path(self.config.get('reports_dir', 'reports')) / 'flight_dashboard.html'
-        dashboard_path.parent.mkdir(exist_ok=True)
-        
-        with open(dashboard_path, 'w', encoding='utf-8') as f:
-            f.write(dashboard_html)
-        
-        print(f"🖥️  Enhanced dashboard saved to: {dashboard_path}")
-        print(f"📂 Open this file in your web browser to access all features")
-        
-        return str(dashboard_path)
-    
-    def _generate_dashboard_html(self):
-        """Generate complete HTML with all features"""
-        
-        # Create all visualizations
-        charts_html = self._create_all_charts()
-        
-        # Generate data for features
-        data_json = self._prepare_data_for_features()
-        
-        # Generate prediction models
-        prediction_data = self._generate_prediction_models()
-        
-        # Create the complete HTML
-        html_template = f"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -71,204 +8,7 @@ class EnhancedDashboardGenerator:
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        {self._get_enhanced_css()}
-    </style>
-</head>
-<body>
-    <div class="app-container">
-        <!-- Sidebar Navigation -->
-        <div class="sidebar">
-            <div class="logo">
-                <i class="fas fa-plane"></i>
-                <span>Flight Ops</span>
-            </div>
-            <nav class="nav-menu">
-                <a href="#dashboard" class="nav-item active" onclick="showSection('dashboard')">
-                    <i class="fas fa-tachometer-alt"></i> Dashboard
-                </a>
-                <a href="#analytics" class="nav-item" onclick="showSection('analytics')">
-                    <i class="fas fa-chart-line"></i> Analytics
-                </a>
-                <a href="#scheduling" class="nav-item" onclick="showSection('scheduling')">
-                    <i class="fas fa-calendar-alt"></i> Scheduling
-                </a>
-                <a href="#predictions" class="nav-item" onclick="showSection('predictions')">
-                    <i class="fas fa-crystal-ball"></i> Predictions
-                </a>
-                <a href="#nlp-query" class="nav-item" onclick="showSection('nlp-query')">
-                    <i class="fas fa-comments"></i> NLP Query
-                </a>
-            </nav>
-        </div>
         
-        <!-- Main Content -->
-        <div class="main-content">
-            <div class="header">
-                <h1 id="page-title">✈️ Flight Operations Dashboard</h1>
-                <div class="header-actions">
-                    <button class="btn-refresh" onclick="refreshData()">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
-                    <div class="time-display" id="currentTime"></div>
-                </div>
-            </div>
-            
-            <!-- Dashboard Section -->
-            <div id="dashboard-section" class="content-section active">
-                <!-- Statistics Cards -->
-                <div class="stats-grid">
-                    {self._create_stats_cards_html()}
-                </div>
-                
-                <!-- Main Charts -->
-                <div class="charts-container">
-                    {charts_html}
-                </div>
-            </div>
-            
-            <!-- Analytics Section -->
-            <div id="analytics-section" class="content-section">
-                <div class="analytics-container">
-                    <div class="analytics-controls">
-                        <h3><i class="fas fa-filter"></i> Advanced Analytics</h3>
-                        <div class="filter-controls">
-                            <select id="analytics-metric" onchange="updateAnalytics()">
-                                <option value="delays">Delay Analysis</option>
-                                <option value="performance">Performance Metrics</option>
-                                <option value="efficiency">Efficiency Analysis</option>
-                                <option value="trends">Trend Analysis</option>
-                            </select>
-                            <select id="analytics-timeframe" onchange="updateAnalytics()">
-                                <option value="daily">Daily</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="monthly">Monthly</option>
-                            </select>
-                            <button onclick="generateReport()" class="btn-generate">
-                                <i class="fas fa-file-pdf"></i> Generate Report
-                            </button>
-                        </div>
-                    </div>
-                    <div id="analytics-charts" class="analytics-charts">
-                        {self._create_analytics_charts()}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Scheduling Section -->
-            <div id="scheduling-section" class="content-section">
-                <div class="scheduling-container">
-                    <div class="scheduling-header">
-                        <h3><i class="fas fa-calendar-alt"></i> Flight Scheduling Management</h3>
-                        <button onclick="optimizeSchedule()" class="btn-optimize">
-                            <i class="fas fa-magic"></i> Optimize Schedule
-                        </button>
-                    </div>
-                    <div class="scheduling-content">
-                        <div class="schedule-calendar">
-                            <div id="calendar-view">{self._create_schedule_calendar()}</div>
-                        </div>
-                        <div class="schedule-optimization">
-                            <h4>Schedule Optimization Insights</h4>
-                            <div id="optimization-results">
-                                {self._create_optimization_insights()}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Predictions Section -->
-            <div id="predictions-section" class="content-section">
-                <div class="predictions-container">
-                    <div class="predictions-header">
-                        <h3><i class="fas fa-crystal-ball"></i> Predictive Analytics</h3>
-                        <div class="prediction-controls">
-                            <input type="date" id="prediction-date" onchange="updatePredictions()">
-                            <select id="prediction-type" onchange="updatePredictions()">
-                                <option value="delays">Delay Prediction</option>
-                                <option value="demand">Demand Forecast</option>
-                                <option value="performance">Performance Forecast</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="predictions-content">
-                        <div class="prediction-charts">
-                            <div id="prediction-results">{self._create_prediction_charts()}</div>
-                        </div>
-                        <div class="prediction-insights">
-                            <h4>AI-Powered Insights</h4>
-                            <div id="ai-insights">
-                                {self._create_ai_insights()}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- NLP Query Section -->
-            <div id="nlp-query-section" class="content-section">
-                <div class="nlp-container">
-                    <div class="nlp-header">
-                        <h3><i class="fas fa-comments"></i> Natural Language Query Interface</h3>
-                        <p>Ask questions about your flight data in plain English</p>
-                    </div>
-                    
-                    <div class="query-interface">
-                        <div class="query-input-container">
-                            <input type="text" id="nlp-query-input" class="nlp-query-input" 
-                                   placeholder="Ask me anything about your flight data... e.g., 'What's the average delay for morning flights?'">
-                            <button onclick="processNLPQuery()" class="query-btn-nlp">
-                                <i class="fas fa-paper-plane"></i> Ask
-                            </button>
-                        </div>
-                        
-                        <div class="sample-queries">
-                            <h4>Sample Questions:</h4>
-                            <div class="query-buttons">
-                                <button class="sample-query-btn" onclick="setNLPQuery('What is the average delay by airline?')">
-                                    Average delay by airline
-                                </button>
-                                <button class="sample-query-btn" onclick="setNLPQuery('Which hours have the most delays?')">
-                                    Peak delay hours
-                                </button>
-                                <button class="sample-query-btn" onclick="setNLPQuery('Show me weekend vs weekday performance')">
-                                    Weekend vs weekday
-                                </button>
-                                <button class="sample-query-btn" onclick="setNLPQuery('Which routes are most delayed?')">
-                                    Most delayed routes
-                                </button>
-                                <button class="sample-query-btn" onclick="setNLPQuery('Predict delays for next week')">
-                                    Predict next week delays
-                                </button>
-                                <button class="sample-query-btn" onclick="setNLPQuery('What are the seasonal trends?')">
-                                    Seasonal trends
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div id="nlp-query-result" class="nlp-query-result"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <script>
-        // Flight data for all features
-        const flightData = {data_json};
-        const analysisResults = {json.dumps(self.analysis_results, default=str)};
-        const predictionData = {json.dumps(prediction_data, default=str)};
-        
-        {self._get_enhanced_javascript()}
-    </script>
-</body>
-</html>
-"""
-        return html_template
-    
-    def _get_enhanced_css(self):
-        """Enhanced CSS for multi-feature dashboard"""
-        return """
         * {
             margin: 0;
             padding: 0;
@@ -657,255 +397,235 @@ class EnhancedDashboardGenerator:
                 grid-template-columns: 1fr;
             }
         }
-        """
-    
-    def _create_stats_cards_html(self):
-        """Create enhanced statistics cards"""
-        stats = self.analysis_results.get('basic_stats', {})
-        efficiency = self.analysis_results.get('efficiency_metrics', {})
         
-        cards_html = f"""
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-plane"></i>
+                <span>Flight Ops</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="#dashboard" class="nav-item active" onclick="showSection('dashboard')">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="#analytics" class="nav-item" onclick="showSection('analytics')">
+                    <i class="fas fa-chart-line"></i> Analytics
+                </a>
+                <a href="#scheduling" class="nav-item" onclick="showSection('scheduling')">
+                    <i class="fas fa-calendar-alt"></i> Scheduling
+                </a>
+                <a href="#predictions" class="nav-item" onclick="showSection('predictions')">
+                    <i class="fas fa-crystal-ball"></i> Predictions
+                </a>
+                <a href="#nlp-query" class="nav-item" onclick="showSection('nlp-query')">
+                    <i class="fas fa-comments"></i> NLP Query
+                </a>
+            </nav>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="header">
+                <h1 id="page-title">✈️ Flight Operations Dashboard</h1>
+                <div class="header-actions">
+                    <button class="btn-refresh" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <div class="time-display" id="currentTime"></div>
+                </div>
+            </div>
+            
+            <!-- Dashboard Section -->
+            <div id="dashboard-section" class="content-section active">
+                <!-- Statistics Cards -->
+                <div class="stats-grid">
+                    
         <div class="stat-card">
-            <div class="stat-number">{stats.get('total_flights', 0):,}</div>
+            <div class="stat-number">441</div>
             <div class="stat-label">Total Flights</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{efficiency.get('on_time_performance', 0)*100:.1f}%</div>
+            <div class="stat-number">43.3%</div>
             <div class="stat-label">On-Time Performance</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{stats.get('avg_daily_flights', 0):.0f}</div>
+            <div class="stat-number">63</div>
             <div class="stat-label">Daily Average</div>
         </div>
         <div class="stat-card">
-            <div class="stat-number">{stats.get('unique_airlines', 0)}</div>
+            <div class="stat-number">9</div>
             <div class="stat-label">Airlines</div>
         </div>
-        """
         
-        # Add additional metrics
-        if 'delay_analysis' in self.analysis_results:
-            delay_info = self.analysis_results['delay_analysis']
-            if 'Departure Delay (min)' in delay_info:
-                avg_delay = delay_info['Departure Delay (min)']['mean']
-                cards_html += f"""
                 <div class="stat-card">
-                    <div class="stat-number">{avg_delay:.1f}min</div>
+                    <div class="stat-number">22.2min</div>
                     <div class="stat-label">Avg Delay</div>
                 </div>
-                """
-        
-        return cards_html
-    
-    def _create_all_charts(self):
-        """Create all dashboard charts"""
-        charts = []
-        
-        # Chart 1: Real-time Operations Overview
-        fig1 = self._create_operations_overview()
-        chart1_html = f"""
+                
+                </div>
+                
+                <!-- Main Charts -->
+                <div class="charts-container">
+                    
         <div class="chart">
             <h3><i class="fas fa-tachometer-alt"></i> Operations Overview</h3>
-            <div id="operationsChart">{pyo.plot(fig1, output_type='div', include_plotlyjs=False)}</div>
+            <div id="operationsChart"><div>                            <div id="8b100250-3a16-42b5-bb0f-632e85165def" class="plotly-graph-div" style="height:400px; width:100%;"></div>            <script type="text/javascript">                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("8b100250-3a16-42b5-bb0f-632e85165def")) {                    Plotly.newPlot(                        "8b100250-3a16-42b5-bb0f-632e85165def",                        [{"marker":{"color":"lightblue"},"name":"Flight Count","opacity":0.7,"x":{"dtype":"f8","bdata":"AAAAAAAAFEAAAAAAAAAYQAAAAAAAABxAAAAAAAAAIEAAAAAAAAAkQA=="},"xaxis":"x","y":{"dtype":"i2","bdata":"AQCjAH0AWwAFAA=="},"yaxis":"y","type":"bar"},{"line":{"color":"red","width":3},"mode":"lines+markers","name":"Avg Delay","x":{"dtype":"f8","bdata":"AAAAAAAAFEAAAAAAAAAYQAAAAAAAABxAAAAAAAAAIEAAAAAAAAAkQA=="},"xaxis":"x","y":{"dtype":"f8","bdata":"AAAAAAAANEDUM5Xrjhc0QKabxCCwcjBAf+mXfumXPUCamZmZmdlZQA=="},"yaxis":"y2","type":"scatter"}],                        {"height":400,"template":{"data":{"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"#E5ECF6","showlakes":true,"showland":true,"subunitcolor":"white"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"bgcolor":"#E5ECF6","radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","gridwidth":2,"linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white"},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","gridwidth":2,"linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white"},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","gridwidth":2,"linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"bgcolor":"#E5ECF6","caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","zerolinewidth":2}}},"title":{"text":"Hourly Operations"},"xaxis":{"anchor":"y","domain":[0.0,0.94]},"yaxis":{"anchor":"x","domain":[0.0,1.0]},"yaxis2":{"anchor":"x","overlaying":"y","side":"right"}},                        {"responsive": true}                    )                };            </script>        </div></div>
         </div>
-        """
-        charts.append(chart1_html)
         
-        # Chart 2: Performance Metrics
-        fig2 = self._create_performance_metrics()
-        chart2_html = f"""
+
         <div class="chart">
             <h3><i class="fas fa-chart-line"></i> Performance Trends</h3>
-            <div id="performanceChart">{pyo.plot(fig2, output_type='div', include_plotlyjs=False)}</div>
+            <div id="performanceChart"><div>                            <div id="491b8f44-ef6e-4f9f-bba4-746502241791" class="plotly-graph-div" style="height:400px; width:100%;"></div>            <script type="text/javascript">                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("491b8f44-ef6e-4f9f-bba4-746502241791")) {                    Plotly.newPlot(                        "491b8f44-ef6e-4f9f-bba4-746502241791",                        [{"line":{"color":"green","width":2},"mode":"lines+markers","name":"On-Time %","x":["2025-07-19","2025-07-20","2025-07-21","2025-07-22","2025-07-23","2025-07-24","2025-07-25"],"y":{"dtype":"f8","bdata":"JEmSJEmSTEC2bdu2bVtOQCRJkiRJkjxAEtpLaC+hTUBfQnsJ7SVHQC666KKLLkxAHcdxHMdxQ0A="},"type":"scatter"}],                        {"height":400,"template":{"data":{"barpolar":[{"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"white","linecolor":"white","minorgridcolor":"white","startlinecolor":"#2a3f5f"},"type":"carpet"}],"choropleth":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"choropleth"}],"contourcarpet":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"contourcarpet"}],"contour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"contour"}],"heatmap":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"heatmap"}],"histogram2dcontour":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2dcontour"}],"histogram2d":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"histogram2d"}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"mesh3d":[{"colorbar":{"outlinewidth":0,"ticks":""},"type":"mesh3d"}],"parcoords":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"parcoords"}],"pie":[{"automargin":true,"type":"pie"}],"scatter3d":[{"line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatter3d"}],"scattercarpet":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattercarpet"}],"scattergeo":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergeo"}],"scattergl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattergl"}],"scattermapbox":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermapbox"}],"scattermap":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scattermap"}],"scatterpolargl":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolargl"}],"scatterpolar":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterpolar"}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"scatterternary":[{"marker":{"colorbar":{"outlinewidth":0,"ticks":""}},"type":"scatterternary"}],"surface":[{"colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"type":"surface"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}]},"layout":{"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"autotypenumbers":"strict","coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"geo":{"bgcolor":"white","lakecolor":"white","landcolor":"#E5ECF6","showlakes":true,"showland":true,"subunitcolor":"white"},"hoverlabel":{"align":"left"},"hovermode":"closest","mapbox":{"style":"light"},"paper_bgcolor":"white","plot_bgcolor":"#E5ECF6","polar":{"angularaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"bgcolor":"#E5ECF6","radialaxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"scene":{"xaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","gridwidth":2,"linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white"},"yaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","gridwidth":2,"linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white"},"zaxis":{"backgroundcolor":"#E5ECF6","gridcolor":"white","gridwidth":2,"linecolor":"white","showbackground":true,"ticks":"","zerolinecolor":"white"}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"ternary":{"aaxis":{"gridcolor":"white","linecolor":"white","ticks":""},"baxis":{"gridcolor":"white","linecolor":"white","ticks":""},"bgcolor":"#E5ECF6","caxis":{"gridcolor":"white","linecolor":"white","ticks":""}},"title":{"x":0.05},"xaxis":{"automargin":true,"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","zerolinewidth":2},"yaxis":{"automargin":true,"gridcolor":"white","linecolor":"white","ticks":"","title":{"standoff":15},"zerolinecolor":"white","zerolinewidth":2}}},"title":{"text":"Daily Performance Trends"},"yaxis":{"title":{"text":"On-Time Performance (%)"}}},                        {"responsive": true}                    )                };            </script>        </div></div>
         </div>
-        """
-        charts.append(chart2_html)
         
-        return '\n'.join(charts)
-    
-    def _create_operations_overview(self):
-        """Create operations overview chart"""
-        if 'Departure Hour' in self.df.columns:
-            hourly_data = self.df.groupby('Departure Hour').agg({
-                'Flight Number': 'count',
-                'Departure Delay (min)': 'mean'
-            }).reset_index()
+                </div>
+            </div>
             
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            <!-- Analytics Section -->
+            <div id="analytics-section" class="content-section">
+                <div class="analytics-container">
+                    <div class="analytics-controls">
+                        <h3><i class="fas fa-filter"></i> Advanced Analytics</h3>
+                        <div class="filter-controls">
+                            <select id="analytics-metric" onchange="updateAnalytics()">
+                                <option value="delays">Delay Analysis</option>
+                                <option value="performance">Performance Metrics</option>
+                                <option value="efficiency">Efficiency Analysis</option>
+                                <option value="trends">Trend Analysis</option>
+                            </select>
+                            <select id="analytics-timeframe" onchange="updateAnalytics()">
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                            </select>
+                            <button onclick="generateReport()" class="btn-generate">
+                                <i class="fas fa-file-pdf"></i> Generate Report
+                            </button>
+                        </div>
+                    </div>
+                    <div id="analytics-charts" class="analytics-charts">
+                        <div id="dynamic-analytics">Select a metric to view advanced analytics</div>
+                    </div>
+                </div>
+            </div>
             
-            fig.add_trace(
-                go.Bar(
-                    x=hourly_data['Departure Hour'],
-                    y=hourly_data['Flight Number'],
-                    name='Flight Count',
-                    opacity=0.7,
-                    marker_color='lightblue'
-                ),
-                secondary_y=False
-            )
-            
-            fig.add_trace(
-                go.Scatter(
-                    x=hourly_data['Departure Hour'],
-                    y=hourly_data['Departure Delay (min)'],
-                    mode='lines+markers',
-                    name='Avg Delay',
-                    line=dict(color='red', width=3)
-                ),
-                secondary_y=True
-            )
-            
-            fig.update_layout(height=400, title_text="Hourly Operations")
-            return fig
-        
-        return go.Figure()
-    
-    def _create_performance_metrics(self):
-        """Create performance metrics chart"""
-        if 'Date' in self.df.columns:
-            daily_data = self.df.groupby(self.df['Date'].dt.date).agg({
-                'On Time': 'mean',
-                'Departure Delay (min)': 'mean'
-            }).reset_index()
-            
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(
-                x=daily_data['Date'],
-                y=daily_data['On Time'] * 100,
-                mode='lines+markers',
-                name='On-Time %',
-                line=dict(color='green', width=2)
-            ))
-            
-            fig.update_layout(
-                height=400,
-                title='Daily Performance Trends',
-                yaxis_title='On-Time Performance (%)'
-            )
-            return fig
-        
-        return go.Figure()
-    
-    def _create_analytics_charts(self):
-        """Create analytics section charts"""
-        # Advanced analytics charts will be generated dynamically
-        return '<div id="dynamic-analytics">Select a metric to view advanced analytics</div>'
-    
-    def _create_schedule_calendar(self):
-        """Create scheduling calendar view"""
-        return '''
+            <!-- Scheduling Section -->
+            <div id="scheduling-section" class="content-section">
+                <div class="scheduling-container">
+                    <div class="scheduling-header">
+                        <h3><i class="fas fa-calendar-alt"></i> Flight Scheduling Management</h3>
+                        <button onclick="optimizeSchedule()" class="btn-optimize">
+                            <i class="fas fa-magic"></i> Optimize Schedule
+                        </button>
+                    </div>
+                    <div class="scheduling-content">
+                        <div class="schedule-calendar">
+                            <div id="calendar-view">
         <div class="calendar-container">
             <h4>Flight Schedule Calendar</h4>
             <div class="calendar-grid" id="schedule-calendar">
                 <!-- Calendar will be populated by JavaScript -->
             </div>
         </div>
-        '''
+        </div>
+                        </div>
+                        <div class="schedule-optimization">
+                            <h4>Schedule Optimization Insights</h4>
+                            <div id="optimization-results">
+                                <ul><li>Peak delay hour: 10.0:00</li><li>Best performance day: Sunday</li></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Predictions Section -->
+            <div id="predictions-section" class="content-section">
+                <div class="predictions-container">
+                    <div class="predictions-header">
+                        <h3><i class="fas fa-crystal-ball"></i> Predictive Analytics</h3>
+                        <div class="prediction-controls">
+                            <input type="date" id="prediction-date" onchange="updatePredictions()">
+                            <select id="prediction-type" onchange="updatePredictions()">
+                                <option value="delays">Delay Prediction</option>
+                                <option value="demand">Demand Forecast</option>
+                                <option value="performance">Performance Forecast</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="predictions-content">
+                        <div class="prediction-charts">
+                            <div id="prediction-results"><div id="prediction-chart-container">Prediction models will be displayed here</div></div>
+                        </div>
+                        <div class="prediction-insights">
+                            <h4>AI-Powered Insights</h4>
+                            <div id="ai-insights">
+                                <ul><li>⚠️ High average delays detected - consider schedule optimization</li></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NLP Query Section -->
+            <div id="nlp-query-section" class="content-section">
+                <div class="nlp-container">
+                    <div class="nlp-header">
+                        <h3><i class="fas fa-comments"></i> Natural Language Query Interface</h3>
+                        <p>Ask questions about your flight data in plain English</p>
+                    </div>
+                    
+                    <div class="query-interface">
+                        <div class="query-input-container">
+                            <input type="text" id="nlp-query-input" class="nlp-query-input" 
+                                   placeholder="Ask me anything about your flight data... e.g., 'What's the average delay for morning flights?'">
+                            <button onclick="processNLPQuery()" class="query-btn-nlp">
+                                <i class="fas fa-paper-plane"></i> Ask
+                            </button>
+                        </div>
+                        
+                        <div class="sample-queries">
+                            <h4>Sample Questions:</h4>
+                            <div class="query-buttons">
+                                <button class="sample-query-btn" onclick="setNLPQuery('What is the average delay by airline?')">
+                                    Average delay by airline
+                                </button>
+                                <button class="sample-query-btn" onclick="setNLPQuery('Which hours have the most delays?')">
+                                    Peak delay hours
+                                </button>
+                                <button class="sample-query-btn" onclick="setNLPQuery('Show me weekend vs weekday performance')">
+                                    Weekend vs weekday
+                                </button>
+                                <button class="sample-query-btn" onclick="setNLPQuery('Which routes are most delayed?')">
+                                    Most delayed routes
+                                </button>
+                                <button class="sample-query-btn" onclick="setNLPQuery('Predict delays for next week')">
+                                    Predict next week delays
+                                </button>
+                                <button class="sample-query-btn" onclick="setNLPQuery('What are the seasonal trends?')">
+                                    Seasonal trends
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="nlp-query-result" class="nlp-query-result"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     
-    def _create_optimization_insights(self):
-        """Create schedule optimization insights"""
-        insights = []
+    <script>
+        // Flight data for all features
+        const flightData = {"total_flights": 441, "columns": ["S.No", "Flight Number", "date_col_2", "From", "To", "Aircraft", "Flight time", "STD", "ATD", "STA", "ATA", "unnamed2", "unnamed3", "Date", "ATA_time", "STD_dt", "ATD_dt", "STA_dt", "ATA_time_dt", "Departure Delay (min)", "Arrival Delay (min)", "Departure Hour", "Arrival Hour", "Airline", "Day of Week", "Is Weekend", "On Time"], "date_range": {"start": "2025-07-19T00:00:00", "end": "2025-07-25T00:00:00"}, "delay_stats": {"mean": 22.236363636363638, "median": 16.0, "std": 28.152093011161547, "min": -16.0, "max": 203.0}, "airline_stats": {"AI": {"flights": 14, "on_time_rate": 0.0, "avg_delay": NaN}, "GF": {"flights": 1, "on_time_rate": 0.0, "avg_delay": NaN}, "IX": {"flights": 1, "on_time_rate": 0.0, "avg_delay": NaN}, "OV": {"flights": 1, "on_time_rate": 0.0, "avg_delay": NaN}, "QO": {"flights": 1, "on_time_rate": 0.0, "avg_delay": NaN}, "QP": {"flights": 4, "on_time_rate": 0.0, "avg_delay": NaN}, "SG": {"flights": 1, "on_time_rate": 0.0, "avg_delay": NaN}, "TK": {"flights": 1, "on_time_rate": 0.0, "avg_delay": NaN}, "WY": {"flights": 1, "on_time_rate": 0.0, "avg_delay": NaN}}, "on_time_rate": 0.4331065759637188, "hourly_stats": {"5": {"flights": 1, "avg_delay": 20.0}, "6": {"flights": 163, "avg_delay": 20.0920245398773}, "7": {"flights": 125, "avg_delay": 16.448}, "8": {"flights": 91, "avg_delay": 29.593406593406595}, "10": {"flights": 5, "avg_delay": 103.4}}};
+        const analysisResults = {"basic_stats": {"total_flights": 441, "unique_airlines": 9, "date_range": {"start": "2025-07-19T00:00:00", "end": "2025-07-25T00:00:00"}, "avg_daily_flights": 63.0}, "peak_analysis": {"hourly_stats": {"Flight Count": {"5.0": 1, "6.0": 163, "7.0": 125, "8.0": 91, "10.0": 5}, "Avg Delay": {"5.0": 20.0, "6.0": 20.09, "7.0": 16.45, "8.0": 29.59, "10.0": 103.4}, "Delay Std": {"5.0": NaN, "6.0": 28.41, "7.0": 15.35, "8.0": 28.92, "10.0": 81.06}, "Congestion Index": {"5.0": 20.0, "6.0": 3274.67, "7.0": 2056.25, "8.0": 2692.69, "10.0": 517.0}}, "peak_hours": {"Flight Count": {"6.0": 163, "7.0": 125, "8.0": 91, "10.0": 5, "5.0": 1}, "Avg Delay": {"6.0": 20.09, "7.0": 16.45, "8.0": 29.59, "10.0": 103.4, "5.0": 20.0}, "Delay Std": {"6.0": 28.41, "7.0": 15.35, "8.0": 28.92, "10.0": 81.06, "5.0": NaN}, "Congestion Index": {"6.0": 3274.67, "7.0": 2056.25, "8.0": 2692.69, "10.0": 517.0, "5.0": 20.0}}, "busiest_hour": 6.0, "most_congested_hour": 6.0}, "delay_analysis": {"Departure Delay (min)": {"mean": 22.236363636363638, "median": 16.0, "std": 28.152093011161547, "percentiles": {"25th": 9.0, "75th": 24.0, "95th": 67.79999999999995}, "on_time_rate": 0.4961038961038961}, "Arrival Delay (min)": {"mean": -3.8671875, "median": -10.0, "std": 29.707021374788503, "percentiles": {"25th": -19.25, "75th": 2.0, "95th": 43.5499999999999}, "on_time_rate": 0.8802083333333334}, "daily_patterns": {"Friday": 23.90740740740741, "Monday": 41.339285714285715, "Saturday": 18.0, "Sunday": 18.125, "Thursday": 15.872727272727273, "Tuesday": 18.0, "Wednesday": 20.12962962962963}}, "efficiency_metrics": {"on_time_performance": 0.4331065759637188, "severe_delay_rate": 0.14058956916099774, "airline_performance": {"AI": 0.0, "GF": 0.0, "IX": 0.0, "OV": 0.0, "QO": 0.0, "QP": 0.0, "SG": 0.0, "TK": 0.0, "WY": 0.0}}, "simulation": {"delay_reduction_scenario": {"reduction_minutes": 5, "current_avg_delay": 22.236363636363638, "simulated_avg_delay": 17.25194805194805, "improvement": 4.984415584415586, "percent_improvement": 22.415605653545153}}, "cascade_analysis": {"affected_flights": 0, "avg_cascade_impact": 0, "total_cascade_minutes": 0}};
+        const predictionData = {"hourly_delays": {"5.0": 20.0, "6.0": 20.0920245398773, "7.0": 16.448, "8.0": 29.593406593406595, "10.0": 103.4}};
         
-        if 'Departure Hour' in self.df.columns and 'Departure Delay (min)' in self.df.columns:
-            peak_delay_hour = self.df.groupby('Departure Hour')['Departure Delay (min)'].mean().idxmax()
-            insights.append(f"Peak delay hour: {peak_delay_hour}:00")
         
-        if 'Day of Week' in self.df.columns and 'On Time' in self.df.columns:
-            best_day = self.df.groupby('Day of Week')['On Time'].mean().idxmax()
-            insights.append(f"Best performance day: {best_day}")
-        
-        insights_html = "<ul>"
-        for insight in insights:
-            insights_html += f"<li>{insight}</li>"
-        insights_html += "</ul>"
-        
-        return insights_html
-    
-    def _create_prediction_charts(self):
-        """Create prediction charts"""
-        return '<div id="prediction-chart-container">Prediction models will be displayed here</div>'
-    
-    def _create_ai_insights(self):
-        """Create AI-powered insights"""
-        insights = []
-        
-        if 'Departure Delay (min)' in self.df.columns:
-            avg_delay = self.df['Departure Delay (min)'].mean()
-            if avg_delay > 15:
-                insights.append("⚠️ High average delays detected - consider schedule optimization")
-            else:
-                insights.append("✅ Delays are within acceptable range")
-        
-        insights_html = "<ul>"
-        for insight in insights:
-            insights_html += f"<li>{insight}</li>"
-        insights_html += "</ul>"
-        
-        return insights_html
-    
-    def _generate_prediction_models(self):
-        """Generate simple prediction models"""
-        prediction_data = {}
-        
-        if 'Departure Delay (min)' in self.df.columns and 'Departure Hour' in self.df.columns:
-            # Simple delay prediction by hour
-            hourly_delays = self.df.groupby('Departure Hour')['Departure Delay (min)'].mean()
-            prediction_data['hourly_delays'] = hourly_delays.to_dict()
-        
-        return prediction_data
-    
-    def _prepare_data_for_features(self):
-        """Prepare data for all features"""
-        data_summary = {
-            'total_flights': len(self.df),
-            'columns': list(self.df.columns),
-            'date_range': {
-                'start': self.df['Date'].min().isoformat() if 'Date' in self.df.columns else None,
-                'end': self.df['Date'].max().isoformat() if 'Date' in self.df.columns else None
-            }
-        }
-        
-        # Add comprehensive statistics
-        if 'Departure Delay (min)' in self.df.columns:
-            delay_data = self.df['Departure Delay (min)'].dropna()
-            data_summary['delay_stats'] = {
-                'mean': float(delay_data.mean()),
-                'median': float(delay_data.median()),
-                'std': float(delay_data.std()),
-                'min': float(delay_data.min()),
-                'max': float(delay_data.max())
-            }
-        
-        if 'Airline' in self.df.columns:
-            airline_stats = self.df.groupby('Airline').agg({
-                'Flight Number': 'count',
-                'On Time': 'mean' if 'On Time' in self.df.columns else lambda x: 0,
-                'Departure Delay (min)': 'mean' if 'Departure Delay (min)' in self.df.columns else lambda x: 0
-            }).to_dict('index')
-            data_summary['airline_stats'] = {k: {
-                'flights': int(v['Flight Number']),
-                'on_time_rate': float(v['On Time']) if 'On Time' in self.df.columns else 0,
-                'avg_delay': float(v['Departure Delay (min)']) if 'Departure Delay (min)' in self.df.columns else 0
-            } for k, v in airline_stats.items()}
-        
-        if 'On Time' in self.df.columns:
-            data_summary['on_time_rate'] = float(self.df['On Time'].mean())
-        
-        if 'Departure Hour' in self.df.columns:
-            hourly_stats = self.df.groupby('Departure Hour').agg({
-                'Flight Number': 'count',
-                'Departure Delay (min)': 'mean' if 'Departure Delay (min)' in self.df.columns else lambda x: 0
-            }).to_dict('index')
-            data_summary['hourly_stats'] = {int(k): {
-                'flights': int(v['Flight Number']),
-                'avg_delay': float(v['Departure Delay (min)']) if 'Departure Delay (min)' in self.df.columns else 0
-            } for k, v in hourly_stats.items()}
-        
-        return json.dumps(data_summary, default=str)
-    
-    def _get_enhanced_javascript(self):
-        """Enhanced JavaScript for all features"""
-        return '''
         // Current section tracking
         let currentSection = 'dashboard';
 
@@ -1849,4 +1569,7 @@ class EnhancedDashboardGenerator:
         const styleElement = document.createElement('style');
         styleElement.textContent = additionalCSS;
         document.head.appendChild(styleElement);
-        '''
+        
+    </script>
+</body>
+</html>
